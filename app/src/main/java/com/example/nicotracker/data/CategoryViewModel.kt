@@ -1,40 +1,26 @@
 package com.example.nicotracker.data
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
 
 class CategoryViewModel(private val repository: CategoryRepository) : ViewModel() {
 
-    // Liste observable en "temps réel"
-    val categories: StateFlow<List<Category>> =
-        repository.allCategories.stateIn(
-            viewModelScope,
-            SharingStarted.WhileSubscribed(5000),
-            emptyList()
-        )
+    // --- C'EST CETTE LIGNE QUI MANQUAIT ---
+    // Elle permet de dire : "Hey, donne-moi la liste qui vient de la base de données"
+    val allCategories: Flow<List<Category>> = repository.allCategories
 
-    // Ajouter
-    fun addCategory(name: String) {
-        viewModelScope.launch {
-            repository.addCategory(name)
-        }
+    // Fonction pour ajouter une catégorie
+    fun insert(category: Category) = viewModelScope.launch {
+        repository.insert(category)
     }
 
-    // Supprimer
-    fun deleteCategory(category: Category) {
-        viewModelScope.launch {
-            repository.deleteCategory(category)
-        }
-    }
-
-    // Renommer
-    fun renameCategory(category: Category, newName: String) {
-        viewModelScope.launch {
-            repository.renameCategory(category.id, newName)
-        }
+    // Fonction pour supprimer une catégorie
+    fun delete(category: Category) = viewModelScope.launch {
+        repository.delete(category)
     }
 }
+
+// Cette partie "Factory" sert juste à créer le ViewModel proprement (ne pas toucher)

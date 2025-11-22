@@ -1,24 +1,23 @@
 package com.example.nicotracker.data
 
-import androidx.room.*
+import androidx.room.Dao
+import androidx.room.Delete
+import androidx.room.Insert
+import androidx.room.OnConflictStrategy
+import androidx.room.Query
 import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface CategoryDao {
-
-    // Récupère toutes les catégories en flux continu (pratique pour Jetpack Compose)
-    @Query("SELECT * FROM categories ORDER BY name ASC")
+    // Récupérer toutes les catégories
+    @Query("SELECT * FROM category_table ORDER BY name ASC")
     fun getAllCategories(): Flow<List<Category>>
 
-    // Insère une nouvelle catégorie
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertCategory(category: Category)
+    // Ajouter une catégorie
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insert(category: Category)
 
-    // Supprime une catégorie
+    // Supprimer une catégorie
     @Delete
-    suspend fun deleteCategory(category: Category)
-
-    // Renomme une catégorie
-    @Query("UPDATE categories SET name = :newName WHERE id = :categoryId")
-    suspend fun renameCategory(categoryId: Int, newName: String)
+    suspend fun delete(category: Category)
 }
