@@ -6,15 +6,29 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 
-// IMPORTANT : Vérifiez que [Category::class] est bien dans la liste des entities
+// --- IMPORTS CRUCIAUX ---
+// Assurez-vous que ces lignes ne sont pas grisées ou soulignées en rouge
+import com.example.nicotracker.data.Category
+import com.example.nicotracker.data.JournalEntry
+import com.example.nicotracker.data.SubCategory  // <--- Celle-ci manquait peut-être à Room
+import com.example.nicotracker.data.CategoryDao
+import com.example.nicotracker.data.JournalEntryDao
+import com.example.nicotracker.data.SubCategoryDao
+
 @TypeConverters(Converters::class)
-@Database(entities = [Category::class, JournalEntry::class], version = 2, exportSchema = false)
+@Database(
+    // On déclare les 3 tables ici. C'est la liste officielle.
+    entities = [Category::class, JournalEntry::class, SubCategory::class],
+    version = 3,
+    exportSchema = false
+)
 abstract class AppDatabase : RoomDatabase() {
 
-    // IMPORTANT : Cette ligne permet de rendre le DAO accessible
     abstract fun categoryDao(): CategoryDao
-
     abstract fun journalEntryDao(): JournalEntryDao
+
+    // On déclare le DAO ici pour que Room sache comment l'utiliser
+    abstract fun subCategoryDao(): SubCategoryDao
 
     companion object {
         @Volatile
@@ -27,9 +41,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "nicotracker_database"
                 )
-                    // Cette option permet d'éviter des crashs si on modifie la BDD plus tard
-                    // (destructif, mais pratique pour le développement)
-                    .fallbackToDestructiveMigration()
+                    .fallbackToDestructiveMigration() // On efface et on recrée si la version change
                     .build()
                 INSTANCE = instance
                 instance
