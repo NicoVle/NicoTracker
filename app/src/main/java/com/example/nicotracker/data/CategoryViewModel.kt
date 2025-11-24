@@ -5,6 +5,9 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.firstOrNull
+import com.example.nicotracker.data.Category
+
 
 class CategoryViewModel(private val repository: CategoryRepository) : ViewModel() {
 
@@ -21,6 +24,14 @@ class CategoryViewModel(private val repository: CategoryRepository) : ViewModel(
     fun delete(category: Category) = viewModelScope.launch {
         repository.delete(category)
     }
+
+    fun insertAllIfEmpty(categories: List<Category>) = viewModelScope.launch {
+        val current = repository.allCategories.firstOrNull() ?: emptyList()
+        if (current.isEmpty()) {
+            categories.forEach { repository.insert(it) }
+        }
+    }
+
 }
 
 // Cette partie "Factory" sert juste à créer le ViewModel proprement (ne pas toucher)

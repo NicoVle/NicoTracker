@@ -5,70 +5,72 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.example.nicotracker.data.* // Importe tous nos DAOs, ViewModels, etc.
+import com.example.nicotracker.data.*
+import kotlinx.coroutines.flow.collectLatest
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TodayScreen(
     categoryViewModel: CategoryViewModel,
-    journalEntryViewModel: JournalEntryViewModel
+    journalEntryViewModel: JournalEntryViewModel,
+    subCategoryViewModel: SubCategoryViewModel,
+    showAddDialog: Boolean,
+    onDismissDialog: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
-    // 1. Récupération des catégories (pour le menu déroulant)
-    val categoriesListState = categoryViewModel.allCategories.collectAsState(initial = emptyList())
-    val categories = categoriesListState.value
+    val categories by categoryViewModel.allCategories.collectAsState(initial = emptyList())
+    val entries by journalEntryViewModel.allEntries.collectAsState(initial = emptyList())
 
-    // 2. Récupération des entrées permanentes depuis la BDD (pour l'affichage)
-    val entriesListState = journalEntryViewModel.allEntries.collectAsState(initial = emptyList())
-    val entries = entriesListState.value
+    var showDeleteDialog by remember { mutableStateOf<JournalEntry?>(null) }
 
-    var showAddDialog by remember { mutableStateOf(false) }
 
-    Scaffold(
-        floatingActionButton = {
-            FloatingActionButton(onClick = { showAddDialog = true }) {
-                Icon(Icons.Default.Add, contentDescription = "Ajouter une entrée")
-            }
-        }
-    ) { padding ->
-        Column(modifier = Modifier
+    Column(
+        modifier = modifier
             .fillMaxSize()
-            .padding(padding)
-            .padding(horizontal = 16.dp)) {
+            .padding(16.dp)
+    ) {
 
-            Text(
-                text = "Entrées du jour (${entries.size})",
-                style = MaterialTheme.typography.headlineMedium,
-                modifier = Modifier.padding(vertical = 16.dp)
-            )
+        Text(
+            text = "Entrées du jour (${entries.size})",
+            style = MaterialTheme.typography.headlineMedium
+        )
 
-            // Affichage de la liste des entrées permanentes
-            LazyColumn(modifier = Modifier.fillMaxSize()) {
-                items(entries) { entry ->
-                    Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 4.dp),
-                        onClick = { /* Optionnel: ouvrir les détails */ }
+        Spacer(Modifier.height(16.dp))
+
+        LazyColumn {
+            items(entries) { entry ->
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Column(modifier = Modifier.padding(16.dp)) {
-                            Text(
-                                text = "Catégorie : ${entry.categoryName}",
-                                style = MaterialTheme.typography.titleMedium
-                            )
-                            Text(
-                                text = "Description : ${entry.description}",
-                                style = MaterialTheme.typography.bodyMedium
-                            )
-                            if (entry.value != null) {
-                                Text(
-                                    text = "Valeur : ${entry.value}",
-                                    style = MaterialTheme.typography.bodySmall
-                                )
+                            Text("Catégorie : ${entry.categoryName}")
+                            Text("Commentaire : ${entry.comment ?: "-"}")
+                            var subCategoryName by remember { mutableStateOf<String?>(null) }
+
+                            LaunchedEffect(entry.subCategoryId) {
+                                if (entry.subCategoryId != null) {
+                                    subCategoryViewModel.getSubCategoryName(entry.subCategoryId!!) {
+                                        subCategoryName = it
+                                    }
+                                }
                             }
+
+                            Text("Sous-catégorie : ${subCategoryName ?: "-"}")
+
+                        }
+
+                        IconButton(onClick = { showDeleteDialog = entry }) {
+                            Icon(Icons.Default.Delete, contentDescription = "Supprimer")
                         }
                     }
                 }
@@ -76,108 +78,310 @@ fun TodayScreen(
         }
     }
 
-    // Dialogue d'ajout d'entrée
-    if (showAddDialog) {
-        var selectedCategoryName by remember { mutableStateOf(categories.firstOrNull()?.name ?: "") }
-        var entryDescription by remember { mutableStateOf("") }
-        var entryValue by remember { mutableStateOf("") }
-
+    if (showDeleteDialog != null) {
         AlertDialog(
-            onDismissRequest = { showAddDialog = false },
-            title = { Text("Ajouter une entrée") },
-            text = {
-                Column {
-                    // Sélection de la catégorie
-                    CategoryDropdown(
-                        categories = categories,
-                        selectedCategoryName = selectedCategoryName,
-                        onCategorySelected = { selectedCategoryName = it }
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    // Champ Description
-                    OutlinedTextField(
-                        value = entryDescription,
-                        onValueChange = { entryDescription = it },
-                        label = { Text("Description/Détails") },
-                        modifier = Modifier.fillMaxWidth()
-                    )
-
-                    // Champ Valeur (pour l'instant, c'est générique)
-                    OutlinedTextField(
-                        value = entryValue,
-                        onValueChange = { entryValue = it },
-                        label = { Text("Valeur (Durée, Quantité, Calories...)") },
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
-            },
+            onDismissRequest = { showDeleteDialog = null },
+            title = { Text("Supprimer l’entrée ?") },
+            text = { Text("Cette action est définitive.") },
             confirmButton = {
                 TextButton(onClick = {
-                    if (selectedCategoryName.isNotEmpty() && entryDescription.isNotBlank()) {
-
-                        // ENREGISTREMENT FINAL DANS LA BASE DE DONNÉES
-                        val newEntry = JournalEntry(
-                            categoryName = selectedCategoryName,
-                            description = entryDescription,
-                            value = entryValue.toFloatOrNull() // Convertit la chaîne en Float
-                        )
-                        journalEntryViewModel.insert(newEntry)
-
-                        showAddDialog = false
-                    }
+                    journalEntryViewModel.delete(showDeleteDialog!!)
+                    showDeleteDialog = null
                 }) {
-                    Text("Ajouter")
+                    Text("Supprimer")
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showAddDialog = false }) {
+                TextButton(onClick = { showDeleteDialog = null }) {
                     Text("Annuler")
                 }
             }
         )
     }
+
+
+    if (showAddDialog && categories.isNotEmpty()) {
+        AddEntryDialog(
+            categories = categories,
+            subCategoryViewModel = subCategoryViewModel,
+            onConfirm = {
+                journalEntryViewModel.insert(it)
+                onDismissDialog()
+            },
+            onDismiss = onDismissDialog
+        )
+    }
 }
 
-// Composant utilitaire pour la liste déroulante des catégories
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CategoryDropdown(
+fun AddEntryDialog(
     categories: List<Category>,
-    selectedCategoryName: String,
-    onCategorySelected: (String) -> Unit
+    subCategoryViewModel: SubCategoryViewModel,
+    onConfirm: (JournalEntry) -> Unit,
+    onDismiss: () -> Unit
 ) {
-    var expanded by remember { mutableStateOf(false) }
+    var selectedCategoryName by remember { mutableStateOf(categories.first().name) }
+    var selectedSubCategoryId by remember { mutableStateOf<Int?>(null) }
 
-    ExposedDropdownMenuBox(
-        expanded = expanded,
-        onExpandedChange = { expanded = !expanded },
-    ) {
-        OutlinedTextField(
-            readOnly = true,
-            value = selectedCategoryName,
-            onValueChange = { },
-            label = { Text("Catégorie") },
-            trailingIcon = {
-                ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
-            },
-            modifier = Modifier
-                .menuAnchor()
-                .fillMaxWidth()
-        )
-        ExposedDropdownMenu(
-            expanded = expanded,
-            onDismissRequest = { expanded = false },
-        ) {
-            categories.forEach { category ->
-                DropdownMenuItem(
-                    text = { Text(category.name) },
-                    onClick = {
-                        onCategorySelected(category.name)
-                        expanded = false
+    // Champs fixes par type
+    var sportDuration by remember { mutableStateOf("") }
+    var sportIntensity by remember { mutableStateOf("") }
+
+    var mealCalories by remember { mutableStateOf("") }
+    var mealQuality by remember { mutableStateOf("") }
+
+    var sleepBedTime by remember { mutableStateOf("") }
+    var sleepWakeTime by remember { mutableStateOf("") }
+    var sleepDuration by remember { mutableStateOf("") }
+    var sleepQuality by remember { mutableStateOf("") }
+
+    var productiveDuration by remember { mutableStateOf("") }
+    var productiveFocus by remember { mutableStateOf("") }
+
+    var screenDuration by remember { mutableStateOf("") }
+
+    var selectedDate by remember { mutableStateOf(java.util.Date()) }
+    val datePickerState = rememberDatePickerState(
+        initialSelectedDateMillis = selectedDate.time
+    )
+
+    var showDatePicker by remember { mutableStateOf(false) }
+
+
+    var stepsCount by remember { mutableStateOf("") }
+
+    var moodScore by remember { mutableStateOf("") }
+
+    var comment by remember { mutableStateOf("") }
+
+    // Sous-catégories
+    val selectedCategory = categories.first { it.name == selectedCategoryName }
+    val subCategories by subCategoryViewModel
+        .getSubCategoriesForCategory(selectedCategory.id)
+        .collectAsState(initial = emptyList())
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Ajouter une entrée") },
+        text = {
+            Column {
+
+                // ------- DATE -------
+                TextButton(
+                    onClick = { showDatePicker = true }
+                ) {
+                    Text("Date : " + android.text.format.DateFormat.format("dd/MM/yyyy", selectedDate))
+                }
+
+                Spacer(Modifier.height(12.dp))
+
+                // Catégorie
+                CategoryDropdown(
+                    categories = categories,
+                    selectedCategoryName = selectedCategoryName,
+                    onCategorySelected = {
+                        selectedCategoryName = it
+                        selectedSubCategoryId = null
                     }
                 )
+
+                Spacer(Modifier.height(8.dp))
+
+                // Sous-catégorie
+                SubCategoryDropdown(
+                    subCategories = subCategories,
+                    selectedSubCategoryId = selectedSubCategoryId,
+                    onSelected = { selectedSubCategoryId = it }
+                )
+
+                Spacer(Modifier.height(12.dp))
+
+                // ---------- SPORT ----------
+                if (selectedCategoryName == "Sport") {
+                    OutlinedTextField(
+                        value = sportDuration,
+                        onValueChange = { sportDuration = it },
+                        label = { Text("Durée (minutes)") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = sportIntensity,
+                        onValueChange = { sportIntensity = it },
+                        label = { Text("Intensité (1–10)") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+
+                // ---------- REPAS ----------
+                if (selectedCategoryName == "Repas") {
+                    OutlinedTextField(
+                        value = mealCalories,
+                        onValueChange = { mealCalories = it },
+                        label = { Text("kcal") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = mealQuality,
+                        onValueChange = { mealQuality = it },
+                        label = { Text("Qualité (1–10)") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+
+                // ---------- SOMMEIL ----------
+                if (selectedCategoryName == "Sommeil") {
+                    OutlinedTextField(
+                        value = sleepBedTime,
+                        onValueChange = { sleepBedTime = it },
+                        label = { Text("Heure de couché (hh:mm)") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = sleepWakeTime,
+                        onValueChange = { sleepWakeTime = it },
+                        label = { Text("Heure de réveil (hh:mm)") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = sleepDuration,
+                        onValueChange = { sleepDuration = it },
+                        label = { Text("Durée du sommeil (ex: 7h45)") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = sleepQuality,
+                        onValueChange = { sleepQuality = it },
+                        label = { Text("Qualité du sommeil (1–10)") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+
+                // ---------- ACTION PRODUCTIVE ----------
+                if (selectedCategoryName == "Action productive") {
+                    OutlinedTextField(
+                        value = productiveDuration,
+                        onValueChange = { productiveDuration = it },
+                        label = { Text("Durée (minutes)") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = productiveFocus,
+                        onValueChange = { productiveFocus = it },
+                        label = { Text("Focus (1–10)") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+
+                // ---------- TEMPS D'ÉCRAN ----------
+                if (selectedCategoryName == "Temps d'écran") {
+                    OutlinedTextField(
+                        value = screenDuration,
+                        onValueChange = { screenDuration = it },
+                        label = { Text("Durée (minutes)") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+
+                // ---------- NOMBRE DE PAS ----------
+                if (selectedCategoryName == "Nombre de pas") {
+                    OutlinedTextField(
+                        value = stepsCount,
+                        onValueChange = { stepsCount = it },
+                        label = { Text("Nombre de pas") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+
+                // ---------- HUMEUR ----------
+                if (selectedCategoryName == "Humeur") {
+                    OutlinedTextField(
+                        value = moodScore,
+                        onValueChange = { moodScore = it },
+                        label = { Text("Note (1–10)") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+
+                Spacer(Modifier.height(12.dp))
+
+                // Commentaire (commun)
+                OutlinedTextField(
+                    value = comment,
+                    onValueChange = { comment = it },
+                    label = { Text("Commentaire") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = {
+
+                    val entry = JournalEntry(
+                        categoryName = selectedCategoryName,
+                        subCategoryId = selectedSubCategoryId,
+
+                        date = selectedDate,
+
+                        sportDurationMinutes = sportDuration.toIntOrNull(),
+                        sportIntensity = sportIntensity.toIntOrNull(),
+
+                        mealCalories = mealCalories.toIntOrNull(),
+                        mealQuality = mealQuality.toIntOrNull(),
+
+                        sleepBedTime = sleepBedTime.ifBlank { null },
+                        sleepWakeTime = sleepWakeTime.ifBlank { null },
+                        sleepDuration = sleepDuration.ifBlank { null },
+                        sleepQuality = sleepQuality.toIntOrNull(),
+
+                        productiveDurationMinutes = productiveDuration.toIntOrNull(),
+                        productiveFocus = productiveFocus.toIntOrNull(),
+
+                        screenDurationMinutes = screenDuration.toIntOrNull(),
+
+                        stepsCount = stepsCount.toIntOrNull(),
+
+                        moodScore = moodScore.toIntOrNull(),
+
+                        comment = comment.ifBlank { null }
+                    )
+
+                    onConfirm(entry)
+                }
+            ) {
+                Text("Ajouter")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Annuler")
             }
         }
+    )
+    if (showDatePicker) {
+        DatePickerDialog(
+            onDismissRequest = { showDatePicker = false },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        val millis = datePickerState.selectedDateMillis
+                        if (millis != null) selectedDate = java.util.Date(millis)
+                        showDatePicker = false
+                    }
+                ) {
+                    Text("OK")
+                }
+            }
+        ) {
+            DatePicker(state = datePickerState)
+        }
     }
+
 }

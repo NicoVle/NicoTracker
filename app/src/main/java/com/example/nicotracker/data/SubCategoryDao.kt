@@ -32,4 +32,10 @@ interface SubCategoryDao {
      */
     @Query("SELECT * FROM subcategories WHERE parentcategoryId = :categoryId ORDER BY name ASC")
     fun getAllSubCategoriesByCategoryId(categoryId: Long): Flow<List<SubCategory>>
+
+    @Query("SELECT name FROM subcategories WHERE id = :id LIMIT 1")
+    suspend fun getNameById(id: Int): String?
+
+
+
 }

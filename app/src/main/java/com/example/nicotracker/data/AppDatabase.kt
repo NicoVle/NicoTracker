@@ -19,7 +19,7 @@ import com.example.nicotracker.data.SubCategoryDao
 @Database(
     // On déclare les 3 tables ici. C'est la liste officielle.
     entities = [Category::class, JournalEntry::class, SubCategory::class],
-    version = 3,
+    version = 5,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {

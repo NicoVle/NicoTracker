@@ -15,6 +15,10 @@ class JournalEntryViewModel(private val repository: JournalEntryRepository) : Vi
     fun insert(entry: JournalEntry) = viewModelScope.launch {
         repository.insert(entry)
     }
+    fun delete(entry: JournalEntry) = viewModelScope.launch {
+        repository.delete(entry)
+    }
+
 }
 
 // Classe Factory pour créer le ViewModel correctement

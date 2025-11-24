@@ -11,4 +11,8 @@ class JournalEntryRepository(private val journalEntryDao: JournalEntryDao) {
     suspend fun insert(entry: JournalEntry) {
         journalEntryDao.insert(entry)
     }
+    suspend fun delete(entry: JournalEntry) {
+        journalEntryDao.delete(entry)
+    }
+
 }
