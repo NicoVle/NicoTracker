@@ -3,39 +3,36 @@ package com.example.nicotracker.data
 import androidx.room.Dao
 import androidx.room.Delete
 import androidx.room.Insert
-import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Update
 import kotlinx.coroutines.flow.Flow
-
-// Assurez-vous d'importer la nouvelle entité SubCategory
-// import com.votrepackage.data.SubCategory
 
 @Dao
 interface SubCategoryDao {
 
-    /**
-     * Insère une nouvelle sous-catégorie.
-     * En cas de conflit (même ID), l'ancienne entrée est remplacée.
-     */
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insert(subCategory: SubCategory)
-
-    /**
-     * Supprime une sous-catégorie.
-     */
-    @Delete
-    suspend fun delete(subCategory: SubCategory)
-
-    /**
-     * Récupère toutes les sous-catégories associées à un ID de catégorie spécifique.
-     * Le résultat est un Flow pour observer les changements en temps réel.
-     */
-    @Query("SELECT * FROM subcategories WHERE parentcategoryId = :categoryId ORDER BY name ASC")
-    fun getAllSubCategoriesByCategoryId(categoryId: Long): Flow<List<SubCategory>>
+    @Query("SELECT * FROM subcategories WHERE parentCategoryId = :categoryId")
+    fun getSubCategoriesForCategory(categoryId: Int): Flow<List<SubCategory>>
 
     @Query("SELECT name FROM subcategories WHERE id = :id LIMIT 1")
     suspend fun getNameById(id: Int): String?
 
+    @Query("SELECT * FROM subcategories")
+    suspend fun getAllSync(): List<SubCategory>
 
+    @Query("DELETE FROM subcategories")
+    suspend fun clearAll()
+
+
+    @Insert
+    suspend fun insert(sub: SubCategory)
+
+    @Insert
+    suspend fun insertAll(subCategories: List<SubCategory>)
+
+    @Delete
+    suspend fun delete(sub: SubCategory)
+
+    @Update
+    suspend fun update(subCategory: SubCategory)
 
 }

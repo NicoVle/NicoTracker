@@ -14,11 +14,17 @@ android {
     defaultConfig {
         applicationId = "com.example.nicotracker"
         minSdk = 26
-        targetSdk = 36
+        targetSdk = 34
         versionCode = 1
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    packagingOptions {
+        resources {
+            excludes += "META-INF/DEPENDENCIES"
+        }
     }
 
     buildTypes {
@@ -46,17 +52,42 @@ dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
-    implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.compose.ui)
     implementation(libs.androidx.compose.ui.graphics)
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.compose.material3)
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.6.2")
     implementation("androidx.compose.runtime:runtime-livedata")
+    implementation(platform("androidx.compose:compose-bom:2024.10.00"))
+    implementation("com.google.code.gson:gson:2.10.1")
+
+    implementation("com.google.api-client:google-api-client-android:1.34.0")
+    implementation("com.google.apis:google-api-services-drive:v3-rev20230815-2.0.0")
+
+    implementation("com.google.android.gms:play-services-auth:20.7.0")
+    implementation("com.google.android.gms:play-services-drive:17.0.0")
+
+                        //Google API Client (réseau + auth)//
+
+    implementation("com.google.api-client:google-api-client-android:1.33.0")
+    implementation("com.google.api-client:google-api-client-gson:1.33.0")
+
+    implementation("androidx.compose.material:material-icons-extended:1.5.4")
+
+                        // Health connect
+    implementation("androidx.health.connect:connect-client:1.1.0-alpha07")
+
+                        //Google Drive REST API//
+
+    implementation("com.google.apis:google-api-services-drive:v3-rev197-1.25.0")
+
+
+    implementation(platform("androidx.compose:compose-bom:2024.10.00"))
+    androidTestImplementation(platform("androidx.compose:compose-bom:2024.10.00"))
+
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
-    androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
@@ -64,6 +95,7 @@ dependencies {
     implementation("androidx.room:room-runtime:2.6.1")
     implementation("androidx.room:room-ktx:2.6.1")
     ksp("androidx.room:room-compiler:2.6.1")
+
 
 
 

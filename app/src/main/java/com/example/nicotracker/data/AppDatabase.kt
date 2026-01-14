@@ -7,28 +7,36 @@ import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 
 // --- IMPORTS CRUCIAUX ---
-// Assurez-vous que ces lignes ne sont pas grisées ou soulignées en rouge
 import com.example.nicotracker.data.Category
 import com.example.nicotracker.data.JournalEntry
-import com.example.nicotracker.data.SubCategory  // <--- Celle-ci manquait peut-être à Room
+import com.example.nicotracker.data.SubCategory
+import com.example.nicotracker.data.AvatarState // <--- NOUVEAU
+
 import com.example.nicotracker.data.CategoryDao
 import com.example.nicotracker.data.JournalEntryDao
 import com.example.nicotracker.data.SubCategoryDao
+import com.example.nicotracker.data.AvatarDao // <--- NOUVEAU
 
 @TypeConverters(Converters::class)
 @Database(
-    // On déclare les 3 tables ici. C'est la liste officielle.
-    entities = [Category::class, JournalEntry::class, SubCategory::class],
-    version = 5,
+    // On ajoute AvatarState à la liste des tables
+    entities = [
+        Category::class,
+        JournalEntry::class,
+        SubCategory::class,
+        AvatarState::class // <--- AJOUTÉ ICI
+    ],
+    version = 10,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
 
     abstract fun categoryDao(): CategoryDao
     abstract fun journalEntryDao(): JournalEntryDao
-
-    // On déclare le DAO ici pour que Room sache comment l'utiliser
     abstract fun subCategoryDao(): SubCategoryDao
+
+    // On déclare le nouveau DAO
+    abstract fun avatarDao(): AvatarDao // <--- AJOUTÉ ICI
 
     companion object {
         @Volatile
@@ -41,7 +49,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "nicotracker_database"
                 )
-                    .fallbackToDestructiveMigration() // On efface et on recrée si la version change
+                    .fallbackToDestructiveMigration() // Va recréer la DB proprement avec la nouvelle table
                     .build()
                 INSTANCE = instance
                 instance
